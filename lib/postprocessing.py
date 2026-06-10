@@ -4,9 +4,12 @@ import fmt.comments
 
 def postprocess(answer, keyword, options, request_options=None):
     answer = _answer_add_comments(answer, request_options=request_options)
-    answer = _answer_filter_by_keyword(
-        answer, keyword, options, request_options=request_options
-    )
+    # skip paragraph filtering for scored search results;
+    # the search engine already ranked by relevance and extracted snippets
+    if "search_score" not in answer:
+        answer = _answer_filter_by_keyword(
+            answer, keyword, options, request_options=request_options
+        )
     return answer
 
 

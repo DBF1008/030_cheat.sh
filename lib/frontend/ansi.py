@@ -46,8 +46,11 @@ def visualize(answer_data, request_options):
     Renders `answer_data` as ANSI output.
     """
     answers = answer_data["answers"]
+    pagination = answer_data.get("pagination")
     return _visualize(
-        answers, request_options, search_mode=bool(answer_data["keyword"])
+        answers, request_options,
+        search_mode=bool(answer_data["keyword"]),
+        pagination=pagination,
     )
 
 
@@ -123,7 +126,75 @@ def _colorize_ansi_answer(
     return result
 
 
-def _visualize(answers, request_options, search_mode=False):
+def _pagination_footer(pagination, highlight=True):
+    """Render a pagination status line."""
+    if not pagination:
+        return ""
+
+    page = pagination["current_page"]
+    total = pagination["total_pages"]
+    count = pagination["total_results"]
+    info = "--- page %d/%d (%d results) ---" % (page, total, count)
+
+    if pagination["has_next"]:
+        directory = pagination.get("directory", "")
+        keyword = pagination.get("keyword", "")
+        opts = pagination.get("options", "")
+        next_page = page + 1
+        hint = "next: %s~%s/%s%d" % (directory, keyword, opts, next_page)
+        info += "  " + hint
+
+    if not highlight:
+        return info + "\n"
+
+    return "".join([
+        colored.fg("light_cyan"),
+        info,
+        colored.attr("reset"),
+        "\n",
+    ])
+
+
+def _snippet_preview(snippet, highlight=True):
+    """Render a snippet preview block with dimmed style."""
+    if not snippet:
+        return ""
+
+    if not highlight:
+        return snippet + "\n"
+
+    return "".join([
+        colored.fg("grey_50"),
+        snippet,
+        colored.attr("reset"),
+        "\n",
+    ])
+
+
+def _search_section_header(topic_type, topic, score, highlight=True):
+    """Render a search result section header with score."""
+    section_name = "%s:%s" % (topic_type, topic)
+    score_label = "[score: %d]" % score
+
+    if not highlight:
+        return "#[%s] %s\n" % (section_name, score_label)
+
+    return "".join([
+        "\n",
+        colored.bg("dark_gray"),
+        colored.attr("res_underlined"),
+        " %s " % section_name,
+        colored.attr("res_underlined"),
+        colored.attr("reset"),
+        " ",
+        colored.fg("dark_khaki"),
+        score_label,
+        colored.attr("reset"),
+        "\n",
+    ])
+
+
+def _visualize(answers, request_options, search_mode=False, pagination=None):
 
     highlight = not bool(request_options and request_options.get("no-terminal"))
     color_style = (request_options or {}).get("style", "")
@@ -141,6 +212,13 @@ def _visualize(answers, request_options, search_mode=False):
         topic_type = answer_dict["topic_type"]
         answer = answer_dict["answer"]
         found = found and not topic_type == "unknown"
+
+        # search mode: show snippet preview with score header
+        if search_mode and "snippet" in answer_dict:
+            score = answer_dict.get("search_score", 0)
+            result += _search_section_header(topic_type, topic, score, highlight)
+            result += _snippet_preview(answer_dict["snippet"], highlight)
+            continue
 
         if multiple_answers and topic != "LIMITED":
             section_name = f"{topic_type}:{topic}"
@@ -179,6 +257,10 @@ def _visualize(answers, request_options, search_mode=False):
                 ),
                 language=answer_dict.get("filetype"),
             )
+
+    # append pagination footer for search results
+    if search_mode and pagination:
+        result += "\n" + _pagination_footer(pagination, highlight)
 
     if request_options.get("no-terminal"):
         result = remove_ansi(result)

@@ -104,6 +104,12 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
     else:
         answers = get_answers(topic, request_options=request_options)
 
+    # extract pagination metadata if present (last entry from search)
+    pagination = None
+    if answers and answers[-1].get("topic_type") == "PAGINATION":
+        pagination = answers[-1].get("pagination")
+        answers = answers[:-1]
+
     answers = [
         postprocessing.postprocess(
             answer, keyword, search_options, request_options=request_options
@@ -115,6 +121,7 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
         "query": query,
         "keyword": keyword,
         "answers": answers,
+        "pagination": pagination,
     }
 
     if output_format == "html":

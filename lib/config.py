@@ -149,6 +149,9 @@ _CONFIG = {
     "upstream.url": "https://cheat.sh",
     "upstream.timeout": 5,
     "search.limit": 20,
+    "search.page_size": 20,
+    "search.snippet_lines": 3,
+    "search.max_results": 200,
     "server.bind": "0.0.0.0",
     "server.port": 8002,
 }
