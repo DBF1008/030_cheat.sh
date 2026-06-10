@@ -49,6 +49,7 @@ class Adapter(with_metaclass(AdapterMC, object)):
     _cheatsheet_files_prefix = ""
     _cheatsheet_files_extension = ""
     _pages_list = []
+    _is_always_found = False
 
     @classmethod
     def _class_repr(cls):
@@ -84,6 +85,8 @@ class Adapter(with_metaclass(AdapterMC, object)):
         check if `topic` is available
         CAUTION: only root is checked
         """
+        if self._is_always_found:
+            return True
         return topic in self._list[None]
 
     def is_cache_needed(self):
@@ -216,6 +219,19 @@ class Adapter(with_metaclass(AdapterMC, object)):
         return cls._repository_url
 
     @classmethod
+    def _check_repository_prerequisites(cls):
+        """
+        Check common prerequisites for repository operations.
+        Returns (local_repository_dir, is_valid) tuple.
+        """
+        if not cls._repository_url:
+            return None, False
+        local_repository_dir = cls.local_repository_location()
+        if not local_repository_dir:
+            return None, False
+        return local_repository_dir, True
+
+    @classmethod
     def fetch_command(cls):
         """
         Initial fetch of the repository.
@@ -280,6 +296,8 @@ class Adapter(with_metaclass(AdapterMC, object)):
         """
         local_repository_dir = cls.local_repository_location()
         state_filename = os.path.join(local_repository_dir, ".cached_revision")
+        if isinstance(state, bytes):
+            state = state.decode("utf-8", "replace")
         open(state_filename, "w").write(state)
 
     @classmethod

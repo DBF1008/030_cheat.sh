@@ -62,28 +62,25 @@ class GitRepositoryAdapter(RepositoryAdapter):  # pylint: disable=abstract-metho
     """
 
     @classmethod
+    def _ensure_github_url(cls):
+        """Verify that the repository URL is a supported GitHub URL."""
+        if not cls._repository_url.startswith("https://github.com/"):
+            raise RuntimeError(
+                "Do not known how to handle this repository: %s" % cls._repository_url
+            )
+
+    @classmethod
     def fetch_command(cls):
         """
         Initial fetch of the repository.
         Return cmdline that has to be executed to fetch the repository.
         Skipping if `self._repository_url` is not specified
         """
-
-        if not cls._repository_url:
+        local_dir, valid = cls._check_repository_prerequisites()
+        if not valid:
             return None
-
-        if not cls._repository_url.startswith("https://github.com/"):
-            # in this case `fetch` has to be implemented
-            # in the distinct adapter subclass
-            raise RuntimeError(
-                "Do not known how to handle this repository: %s" % cls._repository_url
-            )
-
-        local_repository_dir = cls.local_repository_location()
-        if not local_repository_dir:
-            return None
-
-        return ["git", "clone", "--depth=1", cls._repository_url, local_repository_dir]
+        cls._ensure_github_url()
+        return ["git", "clone", "--depth=1", cls._repository_url, local_dir]
 
     @classmethod
     def update_command(cls):
@@ -92,21 +89,10 @@ class GitRepositoryAdapter(RepositoryAdapter):  # pylint: disable=abstract-metho
         Return cmdline that has to be executed to update the repository
         inside `local_repository_location()`.
         """
-
-        if not cls._repository_url:
+        _, valid = cls._check_repository_prerequisites()
+        if not valid:
             return None
-
-        local_repository_dir = cls.local_repository_location()
-        if not local_repository_dir:
-            return None
-
-        if not cls._repository_url.startswith("https://github.com/"):
-            # in this case `update` has to be implemented
-            # in the distinct adapter subclass
-            raise RuntimeError(
-                "Do not known how to handle this repository: %s" % cls._repository_url
-            )
-
+        cls._ensure_github_url()
         return ["git", "pull"]
 
     @classmethod
@@ -115,46 +101,11 @@ class GitRepositoryAdapter(RepositoryAdapter):  # pylint: disable=abstract-metho
         Get current state of repository (current revision).
         This is used to find what cache entries should be invalidated.
         """
-
-        if not cls._repository_url:
+        _, valid = cls._check_repository_prerequisites()
+        if not valid:
             return None
-
-        local_repository_dir = cls.local_repository_location()
-        if not local_repository_dir:
-            return None
-
-        if not cls._repository_url.startswith("https://github.com/"):
-            # in this case `update` has to be implemented
-            # in the distinct adapter subclass
-            raise RuntimeError(
-                "Do not known how to handle this repository: %s" % cls._repository_url
-            )
-
+        cls._ensure_github_url()
         return ["git", "rev-parse", "--short", "HEAD", "--"]
-
-    @classmethod
-    def save_state(cls, state):
-        """
-        Save state `state` of the repository.
-        Must be called after the cache clean up.
-        """
-        local_repository_dir = cls.local_repository_location()
-        state_filename = os.path.join(local_repository_dir, ".cached_revision")
-        open(state_filename, "wb").write(state)
-
-    @classmethod
-    def get_state(cls):
-        """
-        Return the saved `state` of the repository.
-        If state cannot be read, return None
-        """
-
-        local_repository_dir = cls.local_repository_location()
-        state_filename = os.path.join(local_repository_dir, ".cached_revision")
-        state = None
-        if os.path.exists(state_filename):
-            state = open(state_filename, "r").read()
-        return state
 
     @classmethod
     def get_updates_list_command(cls):

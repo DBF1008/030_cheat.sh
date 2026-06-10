@@ -219,49 +219,10 @@ class LearnXYAdapter(object):
 
 #
 # Specific programming languages LearnXY cheat sheets configurations
-# Contains much code for the moment; should contain data only
-# ideally should be replaced with YAML
 #
-
-
-class LearnAwkAdapter(LearnXYAdapter):
-    "Learn AWK in Y Minutes"
-
-    prefix = "awk"
-    _filename = "awk.html.markdown"
-    _splitted = False
-
-
-class LearnBashAdapter(LearnXYAdapter):
-    "Learn Bash in Y Minutes"
-
-    prefix = "bash"
-    _filename = "bash.html.markdown"
-    _splitted = False
-
-
-class LearnBfAdapter(LearnXYAdapter):
-    "Learn Brainfuck in Y Minutes"
-
-    prefix = "bf"
-    _filename = "bf.html.markdown"
-    _splitted = False
-
-
-class LearnCAdapter(LearnXYAdapter):
-    "Learn C in Y Minutes"
-
-    prefix = "c"
-    _filename = "c.html.markdown"
-    _splitted = False
-
-
-class LearnChapelAdapter(LearnXYAdapter):
-    "Learn Chapel in Y Minutes"
-
-    prefix = "chapel"
-    _filename = "chapel.html.markdown"
-    _splitted = False
+# Adapters with custom _is_block_separator / _cut_block are defined as classes.
+# Simple unsplitted adapters are generated from a data table below.
+#
 
 
 class LearnClojureAdapter(LearnXYAdapter):
@@ -294,14 +255,6 @@ class LearnClojureAdapter(LearnXYAdapter):
         if answer[-1].split() == "":
             answer = answer[:1]
         return answer
-
-
-class LearnCoffeeScriptAdapter(LearnXYAdapter):
-    "Learn coffeescript in Y Minutes"
-
-    prefix = "coffee"
-    _filename = "coffeescript.html.markdown"
-    _splitted = False
 
 
 class LearnCppAdapter(LearnXYAdapter):
@@ -341,62 +294,6 @@ class LearnCppAdapter(LearnXYAdapter):
         if answer[-1].split() == "":
             answer = answer[:1]
         return answer
-
-
-class LearnCsharpAdapter(LearnXYAdapter):
-    "Learn C# in Y Minutes"
-
-    prefix = "csharp"
-    _filename = "csharp.html.markdown"
-    _splitted = False
-
-
-class LearnDAdapter(LearnXYAdapter):
-    "Learn D in Y Minutes"
-
-    prefix = "d"
-    _filename = "d.html.markdown"
-    _splitted = False
-
-
-class LearnDartAdapter(LearnXYAdapter):
-    "Learn Dart in Y Minutes"
-
-    prefix = "dart"
-    _filename = "dart.html.markdown"
-    _splitted = False
-
-
-class LearnFactorAdapter(LearnXYAdapter):
-    "Learn Factor in Y Minutes"
-
-    prefix = "factor"
-    _filename = "factor.html.markdown"
-    _splitted = False
-
-
-class LearnForthAdapter(LearnXYAdapter):
-    "Learn Forth in Y Minutes"
-
-    prefix = "forth"
-    _filename = "forth.html.markdown"
-    _splitted = False
-
-
-class LearnFsharpAdapter(LearnXYAdapter):
-    "Learn F# in Y Minutes"
-
-    prefix = "fsharp"
-    _filename = "fsharp.html.markdown"
-    _splitted = False
-
-
-class LearnElispAdapter(LearnXYAdapter):
-    "Learn Elisp in Y Minutes"
-
-    prefix = "elisp"
-    _filename = "elisp.html.markdown"
-    _splitted = False
 
 
 class LearnElixirAdapter(LearnXYAdapter):
@@ -503,36 +400,39 @@ class LearnErlangAdapter(LearnXYAdapter):
         return answer
 
 
-class LearnFortranAdapter(LearnXYAdapter):
-    "Learn Fortran in Y Minutes"
+class LearnHaskellAdapter(LearnXYAdapter):
+    """
+    Learn Haskell in Y Minutes
+    """
 
-    prefix = "fortran"
-    _filename = "fortran95.html.markdown"
-    _splitted = False
+    prefix = "haskell"
+    _filename = "haskell.html.markdown"
+    _replace_with = {
+        "More_about_Objects": "Prototypes",
+    }
 
+    def _is_block_separator(self, before, now, after):
+        if (
+            re.match("------+", before)
+            and re.match(r"--+\s+[0-9]+\.", now)
+            and re.match("------+", after)
+        ):
+            block_name = re.sub(r"--+\s+[0-9]+\.\s*", "", now)
+            block_name = "_".join(block_name.strip(", ").split())
+            for k in self._replace_with:
+                if k in block_name:
+                    block_name = self._replace_with[k]
+            return block_name
+        return None
 
-class LearnGoAdapter(LearnXYAdapter):
-    "Learn Go in Y Minutes"
-
-    prefix = "go"
-    _filename = "go.html.markdown"
-    _splitted = False
-
-
-class LearnGroovyAdapter(LearnXYAdapter):
-    "Learn Groovy in Y Minutes"
-
-    prefix = "groovy"
-    _filename = "groovy.html.markdown"
-    _splitted = False
-
-
-class LearnJavaAdapter(LearnXYAdapter):
-    "Learn Java in Y Minutes"
-
-    prefix = "java"
-    _filename = "java.html.markdown"
-    _splitted = False
+    @staticmethod
+    def _cut_block(block, start_block=False):
+        answer = block[2:-1]
+        if answer[0].split() == "":
+            answer = answer[1:]
+        if answer[-1].split() == "":
+            answer = answer[:1]
+        return answer
 
 
 class LearnJavaScriptAdapter(LearnXYAdapter):
@@ -599,28 +499,22 @@ class LearnJuliaAdapter(LearnXYAdapter):
         return answer
 
 
-class LearnHaskellAdapter(LearnXYAdapter):
+class LearnKotlinAdapter(LearnXYAdapter):
     """
-    Learn Haskell in Y Minutes
+    Learn Kotlin in Y Minutes
     """
 
-    prefix = "haskell"
-    _filename = "haskell.html.markdown"
-    _replace_with = {
-        "More_about_Objects": "Prototypes",
-    }
+    prefix = "kotlin"
+    _filename = "kotlin.html.markdown"
 
     def _is_block_separator(self, before, now, after):
         if (
-            re.match("------+", before)
-            and re.match(r"--+\s+[0-9]+\.", now)
-            and re.match("------+", after)
+            re.match("#######+", before)
+            and re.match("#######+", after)
+            and re.match(r"#+\s+[0-9]+\.", now)
         ):
-            block_name = re.sub(r"--+\s+[0-9]+\.\s*", "", now)
-            block_name = "_".join(block_name.strip(", ").split())
-            for k in self._replace_with:
-                if k in block_name:
-                    block_name = self._replace_with[k]
+            block_name = re.sub(r"#+\s+[0-9]+\.\s*", "", now)
+            block_name = "_".join(block_name.strip().split())
             return block_name
         return None
 
@@ -632,14 +526,6 @@ class LearnHaskellAdapter(LearnXYAdapter):
         if answer[-1].split() == "":
             answer = answer[:1]
         return answer
-
-
-class LearnLispAdapter(LearnXYAdapter):
-    "Learn Lisp in Y Minutes"
-
-    prefix = "lisp"
-    _filename = "common-lisp.html.markdown"
-    _splitted = False
 
 
 class LearnLuaAdapter(LearnXYAdapter):
@@ -676,67 +562,6 @@ class LearnLuaAdapter(LearnXYAdapter):
         if answer[-1].split() == "":
             answer = answer[:1]
         return answer
-
-
-class LearnMathematicaAdapter(LearnXYAdapter):
-    "Learn Mathematica in Y Minutes"
-
-    prefix = "mathematica"
-    _filename = "wolfram.html.markdown"
-    _splitted = False
-
-
-class LearnMatlabAdapter(LearnXYAdapter):
-    "Learn Matlab in Y Minutes"
-
-    prefix = "matlab"
-    _filename = "matlab.html.markdown"
-    _splitted = False
-
-
-class LearnOctaveAdapter(LearnXYAdapter):
-    "Learn Octave in Y Minutes"
-
-    prefix = "octave"
-    _filename = "matlab.html.markdown"
-    _splitted = False
-
-
-class LearnKotlinAdapter(LearnXYAdapter):
-    """
-    Learn Kotlin in Y Minutes
-    """
-
-    prefix = "kotlin"
-    _filename = "kotlin.html.markdown"
-
-    def _is_block_separator(self, before, now, after):
-        if (
-            re.match("#######+", before)
-            and re.match("#######+", after)
-            and re.match(r"#+\s+[0-9]+\.", now)
-        ):
-            block_name = re.sub(r"#+\s+[0-9]+\.\s*", "", now)
-            block_name = "_".join(block_name.strip().split())
-            return block_name
-        return None
-
-    @staticmethod
-    def _cut_block(block, start_block=False):
-        answer = block[2:-1]
-        if answer[0].split() == "":
-            answer = answer[1:]
-        if answer[-1].split() == "":
-            answer = answer[:1]
-        return answer
-
-
-class LearnObjectiveCAdapter(LearnXYAdapter):
-    "Learn Objective C in Y Minutes"
-
-    prefix = "objective-c"
-    _filename = "objective-c.html.markdown"
-    _splitted = False
 
 
 class LearnOCamlAdapter(LearnXYAdapter):
@@ -812,14 +637,6 @@ class LearnPerlAdapter(LearnXYAdapter):
         return answer
 
 
-class LearnPerl6Adapter(LearnXYAdapter):
-    "Learn Perl 6 in Y Minutes"
-
-    prefix = "perl6"
-    _filename = "perl6.html.markdown"
-    _splitted = False
-
-
 class LearnPHPAdapter(LearnXYAdapter):
     """
     Learn PHP in Y Minutes
@@ -874,30 +691,6 @@ class LearnPythonAdapter(LearnXYAdapter):
         return answer
 
 
-class LearnPython3Adapter(LearnXYAdapter):
-    "Learn Python 3 in Y Minutes"
-
-    prefix = "python3"
-    _filename = "python3.html.markdown"
-    _splitted = False
-
-
-class LearnRAdapter(LearnXYAdapter):
-    "Learn R in Y Minutes"
-
-    prefix = "r"
-    _filename = "r.html.markdown"
-    _splitted = False
-
-
-class LearnRacketAdapter(LearnXYAdapter):
-    "Learn Racket in Y Minutes"
-
-    prefix = "racket"
-    _filename = "racket.html.markdown"
-    _splitted = False
-
-
 class LearnRubyAdapter(LearnXYAdapter):
     """
     Learn Ruby in Y Minutes
@@ -932,84 +725,65 @@ class LearnRubyAdapter(LearnXYAdapter):
         return answer
 
 
-class LearnRustAdapter(LearnXYAdapter):
-    "Learn Rust in Y Minutes"
+#
+# Data-driven simple (unsplitted) adapters.
+# Each entry: (prefix, filename)
+#
 
-    prefix = "rust"
-    _filename = "rust.html.markdown"
-    _splitted = False
-
-
-class LearnSolidityAdapter(LearnXYAdapter):
-    "Learn Solidity in Y Minutes"
-
-    prefix = "solidity"
-    _filename = "solidity.html.markdown"
-    _splitted = False
-
-
-class LearnSwiftAdapter(LearnXYAdapter):
-    "Learn Swift in Y Minutes"
-
-    prefix = "swift"
-    _filename = "swift.html.markdown"
-    _splitted = False
-
-
-class LearnTclAdapter(LearnXYAdapter):
-    "Learn Tcl in Y Minutes"
-
-    prefix = "tcl"
-    _filename = "tcl.html.markdown"
-    _splitted = False
-
-
-class LearnTcshAdapter(LearnXYAdapter):
-    "Learn Tcsh in Y Minutes"
-
-    prefix = "tcsh"
-    _filename = "tcsh.html.markdown"
-    _splitted = False
-
-
-class LearnVisualBasicAdapter(LearnXYAdapter):
-    "Learn Visual Basic in Y Minutes"
-
-    prefix = "vb"
-    _filename = "visualbasic.html.markdown"
-    _splitted = False
+_SIMPLE_ADAPTERS = [
+    ("awk",          "awk.html.markdown"),
+    ("bash",         "bash.html.markdown"),
+    ("bf",           "bf.html.markdown"),
+    ("c",            "c.html.markdown"),
+    ("chapel",       "chapel.html.markdown"),
+    ("cmake",        "cmake.html.markdown"),
+    ("coffee",       "coffeescript.html.markdown"),
+    ("csharp",       "csharp.html.markdown"),
+    ("d",            "d.html.markdown"),
+    ("dart",         "dart.html.markdown"),
+    ("elisp",        "elisp.html.markdown"),
+    ("factor",       "factor.html.markdown"),
+    ("forth",        "forth.html.markdown"),
+    ("fortran",      "fortran95.html.markdown"),
+    ("fsharp",       "fsharp.html.markdown"),
+    ("git",          "git.html.markdown"),
+    ("go",           "go.html.markdown"),
+    ("groovy",       "groovy.html.markdown"),
+    ("java",         "java.html.markdown"),
+    ("latex",        "latex.html.markdown"),
+    ("lisp",         "common-lisp.html.markdown"),
+    ("mathematica",  "wolfram.html.markdown"),
+    ("matlab",       "matlab.html.markdown"),
+    ("nim",          "nim.html.markdown"),
+    ("objective-c",  "objective-c.html.markdown"),
+    ("octave",       "matlab.html.markdown"),
+    ("perl6",        "perl6.html.markdown"),
+    ("python3",      "python3.html.markdown"),
+    ("r",            "r.html.markdown"),
+    ("racket",       "racket.html.markdown"),
+    ("rust",         "rust.html.markdown"),
+    ("solidity",     "solidity.html.markdown"),
+    ("swift",        "swift.html.markdown"),
+    ("tcl",          "tcl.html.markdown"),
+    ("tcsh",         "tcsh.html.markdown"),
+    ("vb",           "visualbasic.html.markdown"),
+]
 
 
-class LearnCMakeAdapter(LearnXYAdapter):
-    "Learn CMake in Y Minutes"
-
-    prefix = "cmake"
-    _filename = "cmake.html.markdown"
-    _splitted = False
-
-
-class LearnNimAdapter(LearnXYAdapter):
-    "Learn Nim in Y Minutes"
-
-    prefix = "nim"
-    _filename = "nim.html.markdown"
-    _splitted = False
+def _make_learn_adapter(prefix_val, filename_val):
+    """
+    Dynamically create a simple unsplitted LearnXYAdapter subclass.
+    """
+    class_name = "Learn%sAdapter" % prefix_val.capitalize().replace("-", "")
+    return type(class_name, (LearnXYAdapter,), {
+        "prefix": prefix_val,
+        "_filename": filename_val,
+        "_splitted": False,
+    })
 
 
-class LearnGitAdapter(LearnXYAdapter):
-    "Learn Git in Y Minutes"
-
-    prefix = "git"
-    _filename = "git.html.markdown"
-    _splitted = False
+for _prefix, _filename in _SIMPLE_ADAPTERS:
+    globals()["_learn_%s" % _prefix] = _make_learn_adapter(_prefix, _filename)
 
 
-class LearnLatexAdapter(LearnXYAdapter):
-    "Learn Nim in Y Minutes"
-
-    prefix = "latex"
-    _filename = "latex.html.markdown"
-    _splitted = False
-
-
-_ADAPTERS = {cls.prefix: cls() for cls in vars()["LearnXYAdapter"].__subclasses__()}
+_ADAPTERS = {cls.prefix: cls() for cls in LearnXYAdapter.__subclasses__()}

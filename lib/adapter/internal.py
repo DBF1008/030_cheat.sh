@@ -113,14 +113,11 @@ class UnknownPages(InternalPages):
 
     _adapter_name = "unknown"
     _output_format = "text"
+    _is_always_found = True
 
     @staticmethod
     def get_list(prefix=None):
         return []
-
-    @staticmethod
-    def is_found(topic):
-        return True
 
     def _get_page(self, topic, request_options=None):
         topics_list = self.get_topics_list()

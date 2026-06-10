@@ -25,6 +25,7 @@ class Rosetta(GitRepositoryAdapter):
     _output_format = "code"
     _local_repository_location = "RosettaCodeData"
     _repository_url = "https://github.com/acmeism/RosettaCodeData"
+    _is_always_found = True
 
     __section_name = "rosetta"
 
@@ -149,6 +150,3 @@ class Rosetta(GitRepositoryAdapter):
         for i in self._rosetta_code_name:
             answer.append("%s/%s/" % (i, self.__section_name))
         return answer
-
-    def is_found(self, _):
-        return True

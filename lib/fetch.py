@@ -208,7 +208,20 @@ def update_by_name(name):
     """
     Find adapter by its `name` and update only it.
     """
-    pass
+    adptr = adapter.adapter.adapter_by_name(name)
+    if adptr is None:
+        _log("ERROR: adapter '%s' not found", name)
+        return False
+
+    location = adptr.local_repository_location()
+    if not location:
+        _log("ERROR: adapter '%s' has no local repository", name)
+        return False
+    if not os.path.exists(location):
+        _log("ERROR: repository for '%s' not fetched yet: %s", name, location)
+        return False
+
+    return _update_adapter(adptr)
 
 
 def _show_usage():
@@ -252,7 +265,11 @@ def main(args):
     if args[0] == "fetch-all":
         fetch_all()
     elif args[0] == "update":
-        update_by_name(sys.argv[1])
+        if len(args) < 2:
+            _log("ERROR: 'update' requires an adapter name argument")
+            _show_usage()
+            sys.exit(1)
+        update_by_name(args[1])
     elif args[0] == "update-all":
         update_all()
     else:

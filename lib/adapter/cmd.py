@@ -98,6 +98,7 @@ class AdapterRfc(CommandAdapter):
     _adapter_name = "rfc"
     _output_format = "text"
     _cache_needed = True
+    _is_always_found = True
     _command = ["share/adapters/rfc.sh"]
 
     def _get_command(self, topic, request_options=None):
@@ -114,9 +115,6 @@ class AdapterRfc(CommandAdapter):
     def _get_list(self, prefix=None):
         return list("rfc/%s" % x for x in range(1, 8649))
 
-    def is_found(self, topic):
-        return True
-
 
 class AdapterOeis(CommandAdapter):
     """
@@ -127,6 +125,7 @@ class AdapterOeis(CommandAdapter):
     _adapter_name = "oeis"
     _output_format = "text+code"
     _cache_needed = True
+    _is_always_found = True
     _command = ["share/adapters/oeis.sh"]
 
     @staticmethod
@@ -155,9 +154,6 @@ class AdapterOeis(CommandAdapter):
 
         return cmd + [topic]
 
-    def is_found(self, topic):
-        return True
-
 
 class AdapterChmod(CommandAdapter):
     """
@@ -168,6 +164,7 @@ class AdapterChmod(CommandAdapter):
     _adapter_name = "chmod"
     _output_format = "text"
     _cache_needed = True
+    _is_always_found = True
     _command = ["share/adapters/chmod.sh"]
 
     def _get_command(self, topic, request_options=None):
@@ -180,6 +177,3 @@ class AdapterChmod(CommandAdapter):
             topic = re.sub("[^a-zA-Z0-9-]", "", topic)
 
         return cmd + [topic]
-
-    def is_found(self, topic):
-        return True

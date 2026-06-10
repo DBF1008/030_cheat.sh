@@ -53,6 +53,7 @@ class Question(UpstreamAdapter):
     _adapter_name = "question"
     _output_format = "text+code"
     _cache_needed = True
+    _is_always_found = True
 
     def _get_page(self, topic, request_options=None):
         """
@@ -129,6 +130,3 @@ class Question(UpstreamAdapter):
 
     def get_list(self, prefix=None):
         return []
-
-    def is_found(self, topic):
-        return True
