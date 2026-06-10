@@ -178,7 +178,7 @@ def _update_adapter(adptr):
     for entry in entries:
         cache_name = name + ":" + entry
         _log("+ invalidating %s", cache_name)
-        cache.delete(cache_name)
+        cache.delete_across_tenants(cache_name)
 
     if entries:
         _log("Done")

@@ -33,7 +33,7 @@ def _add_section_name(query):
         return re.sub(r"([^\+])\+([^\+])", r"\1/\2", query, count=1)
 
 
-def cheat_wrapper(query, request_options=None, output_format="ansi"):
+def cheat_wrapper(query, request_options=None, output_format="ansi", tenant=None):
     """
     Function that delivers cheat sheet for `query`.
     If `html` is True, the answer is formatted as HTML.
@@ -102,7 +102,7 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
             topic, keyword, options=search_options, request_options=request_options
         )
     else:
-        answers = get_answers(topic, request_options=request_options)
+        answers = get_answers(topic, request_options=request_options, tenant=tenant)
 
     answers = [
         postprocessing.postprocess(

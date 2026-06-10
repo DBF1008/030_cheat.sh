@@ -166,7 +166,7 @@ class Router(object):
         return topic
 
     def get_answers(
-        self, topic: str, request_options: Dict[str, str] = None
+        self, topic: str, request_options: Dict[str, str] = None, tenant=None
     ) -> List[Dict[str, Any]]:
         """
         Find cheat sheets for the topic.
@@ -196,7 +196,7 @@ class Router(object):
         # in a special way:
         # we do not drop the old style cache entries and try to reuse them if possible
         if topic_types == ["question"]:
-            answer = cache.get("q:" + topic)
+            answer = cache.get("q:" + topic, tenant=tenant)
             if answer:
                 if isinstance(answer, dict):
                     return [answer]
@@ -213,7 +213,7 @@ class Router(object):
                 topic, topic_types[0], request_options=request_options
             )
             if answer.get("cache", True):
-                cache.put("q:" + topic, answer)
+                cache.put("q:" + topic, answer, tenant=tenant)
             return [answer]
 
         # Try to find cacheable queries in the cache.
@@ -225,7 +225,7 @@ class Router(object):
             cache_needed = self._adapter[topic_type].is_cache_needed()
 
             if cache_needed:
-                answer = cache.get(cache_entry_name)
+                answer = cache.get(cache_entry_name, tenant=tenant)
                 if not isinstance(answer, dict):
                     answer = None
                 if answer:
@@ -240,7 +240,7 @@ class Router(object):
                     cache_needed = answer["cache"]
 
             if cache_needed and answer:
-                cache.put(cache_entry_name, answer)
+                cache.put(cache_entry_name, answer, tenant=tenant)
 
             answers.append(answer)
 

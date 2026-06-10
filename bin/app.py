@@ -37,6 +37,7 @@ from post import process_post_request
 from options import parse_args
 
 from stateful_queries import save_query, last_query
+from tenant import identify_tenant
 
 
 if not os.path.exists(os.path.dirname(CONFIG["path.log.main"])):
@@ -269,6 +270,7 @@ def answer(topic=None):
     user_agent = request.headers.get("User-Agent", "").lower()
     html_needed = _is_html_needed(user_agent)
     options = parse_args(request.args)
+    tenant_id = identify_tenant(request)
 
     if topic in [
         "apple-touch-icon-precomposed.png",
@@ -280,12 +282,12 @@ def answer(topic=None):
     request_id = request.cookies.get("id")
     if topic is not None and topic.lstrip("/") == ":last":
         if request_id:
-            topic = last_query(request_id)
+            topic = last_query(request_id, tenant=tenant_id)
         else:
             return "ERROR: you have to set id for your requests to use /:last\n"
     else:
         if request_id:
-            save_query(request_id, topic)
+            save_query(request_id, topic, tenant=tenant_id)
 
     if request.method == "POST":
         process_post_request(request, html_needed)
@@ -319,7 +321,7 @@ def answer(topic=None):
     else:
         output_format = "ansi"
     result, found = cheat_wrapper(
-        topic, request_options=options, output_format=output_format
+        topic, request_options=options, output_format=output_format, tenant=tenant_id
     )
     if "Please come back in several hours" in result and html_is_needed:
         malformed_response = open(
