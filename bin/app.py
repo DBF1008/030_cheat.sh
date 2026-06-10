@@ -34,7 +34,7 @@ from config import CONFIG
 from limits import Limits
 from cheat_wrapper import cheat_wrapper
 from post import process_post_request
-from options import parse_args
+from query_plan import QueryPlan
 
 from stateful_queries import save_query, last_query
 
@@ -79,26 +79,6 @@ app.jinja_loader = jinja2.ChoiceLoader(
 
 LIMITS = Limits()
 
-PLAIN_TEXT_AGENTS = [
-    "curl",
-    "httpie",
-    "lwp-request",
-    "wget",
-    "python-requests",
-    "openbsd ftp",
-    "powershell",
-    "fetch",
-    "aiohttp",
-    "xh",
-]
-
-
-def _is_html_needed(user_agent):
-    """
-    Basing on `user_agent`, return whether it needs HTML or ANSI
-    """
-    return all([x not in user_agent for x in PLAIN_TEXT_AGENTS])
-
 
 def is_result_a_script(query):
     return query in [":cht.sh"]
@@ -139,74 +119,6 @@ def log_query(ip_addr, found, topic, user_agent):
     log_entry = "%s %s %s %s\n" % (ip_addr, found, topic, user_agent)
     with open(CONFIG["path.log.queries"], "ab") as my_file:
         my_file.write(log_entry.encode("utf-8"))
-
-
-def get_request_ip(req):
-    """
-    Extract IP address from `request`
-    """
-
-    if req.headers.getlist("X-Forwarded-For"):
-        ip_addr = req.headers.getlist("X-Forwarded-For")[0]
-        if ip_addr.startswith("::ffff:"):
-            ip_addr = ip_addr[7:]
-    else:
-        ip_addr = req.remote_addr
-    if req.headers.getlist("X-Forwarded-For"):
-        ip_addr = req.headers.getlist("X-Forwarded-For")[0]
-        if ip_addr.startswith("::ffff:"):
-            ip_addr = ip_addr[7:]
-    else:
-        ip_addr = req.remote_addr
-
-    return ip_addr
-
-
-def get_answer_language(request):
-    """
-    Return preferred answer language based on
-    domain name, query arguments and headers
-    """
-
-    def _parse_accept_language(accept_language):
-        languages = accept_language.split(",")
-        locale_q_pairs = []
-
-        for language in languages:
-            try:
-                if language.split(";")[0] == language:
-                    # no q => q = 1
-                    locale_q_pairs.append((language.strip(), "1"))
-                else:
-                    locale = language.split(";")[0].strip()
-                    weight = language.split(";")[1].split("=")[1]
-                    locale_q_pairs.append((locale, weight))
-            except IndexError:
-                pass
-
-        return locale_q_pairs
-
-    def _find_supported_language(accepted_languages):
-        for lang_tuple in accepted_languages:
-            lang = lang_tuple[0]
-            if "-" in lang:
-                lang = lang.split("-", 1)[0]
-            return lang
-        return None
-
-    lang = None
-    hostname = request.headers["Host"]
-    if hostname.endswith(".cheat.sh"):
-        lang = hostname[:-9]
-
-    if "lang" in request.args:
-        lang = request.args.get("lang")
-
-    header_accept_language = request.headers.get("Accept-Language", "")
-    if lang is None and header_accept_language:
-        lang = _find_supported_language(_parse_accept_language(header_accept_language))
-
-    return lang
 
 
 def _proxy(*args, **kwargs):
@@ -266,10 +178,6 @@ def answer(topic=None):
         request.query_string
     """
 
-    user_agent = request.headers.get("User-Agent", "").lower()
-    html_needed = _is_html_needed(user_agent)
-    options = parse_args(request.args)
-
     if topic in [
         "apple-touch-icon-precomposed.png",
         "apple-touch-icon.png",
@@ -277,57 +185,62 @@ def answer(topic=None):
     ] or (topic is not None and any(topic.endswith("/" + x) for x in ["favicon.ico"])):
         return ""
 
-    request_id = request.cookies.get("id")
+    # -- Build the unified query plan ONCE --
+    plan = QueryPlan.from_request(request, topic=topic)
+
+    # -- Stateful queries (:last) --
     if topic is not None and topic.lstrip("/") == ":last":
-        if request_id:
-            topic = last_query(request_id)
+        if plan.request_id:
+            topic = last_query(plan.request_id)
+            plan.topic = topic
         else:
             return "ERROR: you have to set id for your requests to use /:last\n"
     else:
-        if request_id:
-            save_query(request_id, topic)
+        if plan.request_id:
+            save_query(plan.request_id, topic)
 
+    # -- POST handling --
     if request.method == "POST":
-        process_post_request(request, html_needed)
-        if html_needed:
+        process_post_request(request, plan.output_format == "html")
+        if plan.output_format == "html":
             return redirect("/")
         return "OK\n"
 
+    # -- ?topic= redirect --
     if "topic" in request.args:
         return redirect("/%s" % request.args.get("topic"))
 
     if topic is None:
         topic = ":firstpage"
 
-    if topic.startswith(":shell-x/"):
+    # -- Shell proxy --
+    if topic is not None and topic.startswith(":shell-x/"):
         return _proxy()
-        # return requests.get('http://127.0.0.1:3000'+topic[8:]).text
 
-    lang = get_answer_language(request)
-    if lang:
-        options["lang"] = lang
+    # -- Debug endpoint: show parsed QueryPlan --
+    if topic is not None and topic.lstrip("/") == ":plan":
+        return Response(plan.format_debug(), mimetype="text/plain")
 
-    ip_address = get_request_ip(request)
-    if "+" in topic:
-        not_allowed = LIMITS.check_ip(ip_address)
+    # -- Rate limiting --
+    if topic and "+" in topic:
+        not_allowed = LIMITS.check_ip(plan.ip_address)
         if not_allowed:
             return "429 %s\n" % not_allowed, 429
 
-    html_is_needed = _is_html_needed(user_agent) and not is_result_a_script(topic)
-    if html_is_needed:
-        output_format = "html"
-    else:
-        output_format = "ansi"
-    result, found = cheat_wrapper(
-        topic, request_options=options, output_format=output_format
-    )
-    if "Please come back in several hours" in result and html_is_needed:
+    # -- Override output_format for scripts like :cht.sh --
+    if is_result_a_script(topic):
+        plan.output_format = "ansi"
+
+    # -- Dispatch to cheat_wrapper with the plan --
+    result, found = cheat_wrapper(plan)
+
+    if "Please come back in several hours" in result and plan.output_format == "html":
         malformed_response = open(
             os.path.join(CONFIG["path.internal.malformed"])
         ).read()
         return malformed_response
 
-    log_query(ip_address, found, topic, user_agent)
-    if html_is_needed:
+    log_query(plan.ip_address, found, plan.topic, plan.user_agent)
+    if plan.output_format == "html":
         return result
     return Response(result, mimetype="text/plain")

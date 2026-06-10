@@ -1,5 +1,8 @@
 """
 Parse query arguments.
+
+Delegates to QueryPlan for the actual parsing logic.
+The parse_args() function is kept for backward compatibility.
 """
 
 
@@ -7,34 +10,12 @@ def parse_args(args):
     """
     Parse arguments and options.
     Replace short options with their long counterparts.
+
+    NOTE: This function is kept for backward compatibility.
+    New code should use QueryPlan.from_request() instead.
     """
-    result = {
-        "add_comments": True,
-    }
+    from query_plan import QueryPlan
 
-    query = ""
-    newargs = {}
-    for key, val in args.items():
-        if val == "" or val == [] or val == [""]:
-            query += key
-            continue
-        if val == "True":
-            val = True
-        if val == "False":
-            val = False
-        newargs[key] = val
-
-    options_meaning = {
-        "c": dict(add_comments=False, unindent_code=False),
-        "C": dict(add_comments=False, unindent_code=True),
-        "Q": dict(remove_text=True),
-        "q": dict(quiet=True),
-        "T": {"no-terminal": True},
-    }
-    for option, meaning in options_meaning.items():
-        if option in query:
-            result.update(meaning)
-
-    result.update(newargs)
-
-    return result
+    plan = QueryPlan()
+    plan._parse_query_params(args)
+    return plan.to_options_dict()

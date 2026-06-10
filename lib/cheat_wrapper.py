@@ -19,6 +19,8 @@ import postprocessing
 import frontend.html
 import frontend.ansi
 
+from query_plan import QueryPlan
+
 
 def _add_section_name(query):
     # temporary solution before we don't find a fixed one
@@ -33,12 +35,26 @@ def _add_section_name(query):
         return re.sub(r"([^\+])\+([^\+])", r"\1/\2", query, count=1)
 
 
-def cheat_wrapper(query, request_options=None, output_format="ansi"):
+def cheat_wrapper(query_or_plan, request_options=None, output_format="ansi"):
     """
     Function that delivers cheat sheet for `query`.
     If `html` is True, the answer is formatted as HTML.
     Additional request options specified in `request_options`.
+
+    Accepts either:
+      - A QueryPlan object (preferred, new interface)
+      - A query string + request_options + output_format (legacy)
     """
+
+    # -- Normalize input --
+    if isinstance(query_or_plan, QueryPlan):
+        plan = query_or_plan
+        query = plan.topic
+        output_format = plan.output_format
+    else:
+        # Legacy interface
+        plan = None
+        query = query_or_plan
 
     def _rewrite_aliases(word):
         if word == ":bash.completion":
@@ -97,12 +113,23 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
     # query = _strip_hyperlink(query.rstrip('/'))
     topic, keyword, search_options = _parse_query(query)
 
+    # -- Update plan with resolved topic/keyword --
+    if plan is not None:
+        plan.set_topic(topic, keyword, search_options)
+        request_options = plan.to_options_dict()
+
     if keyword:
         answers = find_answers_by_keyword(
-            topic, keyword, options=search_options, request_options=request_options
+            topic,
+            keyword,
+            options=search_options,
+            request_options=request_options,
+            plan=plan,
         )
     else:
-        answers = get_answers(topic, request_options=request_options)
+        answers = get_answers(
+            topic, request_options=request_options, plan=plan
+        )
 
     answers = [
         postprocessing.postprocess(
