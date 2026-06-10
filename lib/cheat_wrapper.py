@@ -9,7 +9,6 @@ Exports:
 """
 
 import re
-import json
 
 from routing import get_answers, get_topics_list
 from search import find_answers_by_keyword
@@ -121,5 +120,8 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
         answer_data["topics_list"] = get_topics_list()
         return frontend.html.visualize(answer_data, request_options)
     elif output_format == "json":
-        return json.dumps(answer_data, indent=4)
+        answer_data["topics_list"] = get_topics_list()
+        return frontend.html.visualize(
+            answer_data, request_options, default_view="json"
+        )
     return frontend.ansi.visualize(answer_data, request_options)
