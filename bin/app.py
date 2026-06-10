@@ -22,6 +22,7 @@ if sys.version_info[0] < 3:
     reload(sys)
     sys.setdefaultencoding("utf8")
 
+import json
 import sys
 import logging
 import os
@@ -32,9 +33,10 @@ from flask import Flask, request, send_from_directory, redirect, Response
 sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..", "lib")))
 from config import CONFIG
 from limits import Limits
-from cheat_wrapper import cheat_wrapper
+from cheat_wrapper import cheat_wrapper, resolve_query_only
 from post import process_post_request
-from options import parse_args
+from options import QueryPlan
+from tenant import identify_tenant
 
 from stateful_queries import save_query, last_query
 
@@ -255,7 +257,7 @@ def _proxy(*args, **kwargs):
 @app.route("/<path:topic>", methods=["GET", "POST"])
 def answer(topic=None):
     """
-    Main rendering function, it processes incoming weather queries.
+    Main rendering function, it processes incoming queries.
     Depending on user agent it returns output in HTML or ANSI format.
 
     Incoming data:
@@ -268,7 +270,6 @@ def answer(topic=None):
 
     user_agent = request.headers.get("User-Agent", "").lower()
     html_needed = _is_html_needed(user_agent)
-    options = parse_args(request.args)
 
     if topic in [
         "apple-touch-icon-precomposed.png",
@@ -277,15 +278,15 @@ def answer(topic=None):
     ] or (topic is not None and any(topic.endswith("/" + x) for x in ["favicon.ico"])):
         return ""
 
-    request_id = request.cookies.get("id")
+    client_id = request.cookies.get("id")
     if topic is not None and topic.lstrip("/") == ":last":
-        if request_id:
-            topic = last_query(request_id)
+        if client_id:
+            topic = last_query(client_id)
         else:
             return "ERROR: you have to set id for your requests to use /:last\n"
     else:
-        if request_id:
-            save_query(request_id, topic)
+        if client_id:
+            save_query(client_id, topic)
 
     if request.method == "POST":
         process_post_request(request, html_needed)
@@ -301,11 +302,31 @@ def answer(topic=None):
 
     if topic.startswith(":shell-x/"):
         return _proxy()
-        # return requests.get('http://127.0.0.1:3000'+topic[8:]).text
+
+    # Detect /:debug requests
+    is_debug = False
+    if topic == ":debug" or topic.startswith(":debug/"):
+        is_debug = True
+        topic = topic[len(":debug"):].lstrip("/") or ":firstpage"
 
     lang = get_answer_language(request)
-    if lang:
-        options["lang"] = lang
+    html_is_needed = html_needed and not is_result_a_script(topic)
+    output_format = "html" if html_is_needed else "ansi"
+
+    query_plan = QueryPlan.from_http(
+        request.args, topic,
+        lang=lang,
+        output_format=output_format,
+        client_id=client_id,
+        tenant_id=identify_tenant(request),
+    )
+
+    if is_debug:
+        resolve_query_only(topic, query_plan)
+        return Response(
+            json.dumps(query_plan.to_debug_dict(), indent=2),
+            mimetype="application/json",
+        )
 
     ip_address = get_request_ip(request)
     if "+" in topic:
@@ -313,14 +334,7 @@ def answer(topic=None):
         if not_allowed:
             return "429 %s\n" % not_allowed, 429
 
-    html_is_needed = _is_html_needed(user_agent) and not is_result_a_script(topic)
-    if html_is_needed:
-        output_format = "html"
-    else:
-        output_format = "ansi"
-    result, found = cheat_wrapper(
-        topic, request_options=options, output_format=output_format
-    )
+    result, found = cheat_wrapper(topic, query_plan=query_plan)
     if "Please come back in several hours" in result and html_is_needed:
         malformed_response = open(
             os.path.join(CONFIG["path.internal.malformed"])

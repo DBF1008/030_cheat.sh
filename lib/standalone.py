@@ -17,7 +17,7 @@ import config
 config.CONFIG["cache.type"] = "none"
 
 import cheat_wrapper
-import options
+from options import QueryPlan
 
 
 def show_usage():
@@ -41,7 +41,7 @@ def show_usage():
 def parse_cmdline(args):
     """
     Parses command line arguments and returns
-    query and request_options
+    query and query_plan
     """
 
     if not args:
@@ -50,15 +50,17 @@ def parse_cmdline(args):
 
     query_string = " ".join(args)
     parsed = urlparse.urlparse("https://srv:0/%s" % query_string)
-    request_options = options.parse_args(
-        urlparse.parse_qs(parsed.query, keep_blank_values=True)
-    )
 
     query = parsed.path.lstrip("/")
     if not query:
         query = ":firstpage"
 
-    return query, request_options
+    query_plan = QueryPlan.from_args(
+        urlparse.parse_qs(parsed.query, keep_blank_values=True),
+        query,
+    )
+
+    return query, query_plan
 
 
 def main(args):
@@ -66,8 +68,8 @@ def main(args):
     standalone wrapper for cheat_wrapper()
     """
 
-    query, request_options = parse_cmdline(args)
-    answer, _ = cheat_wrapper.cheat_wrapper(query, request_options=request_options)
+    query, query_plan = parse_cmdline(args)
+    answer, _ = cheat_wrapper.cheat_wrapper(query, query_plan=query_plan)
     sys.stdout.write(answer)
 
 

@@ -198,6 +198,9 @@ class Router(object):
         if topic_types == ["question"]:
             answer = cache.get("q:" + topic)
             if answer:
+                if hasattr(request_options, "adapter_used"):
+                    request_options.adapter_used = "question"
+                    request_options.cache_hit = True
                 if isinstance(answer, dict):
                     return [answer]
                 return [
@@ -214,6 +217,9 @@ class Router(object):
             )
             if answer.get("cache", True):
                 cache.put("q:" + topic, answer)
+            if hasattr(request_options, "adapter_used"):
+                request_options.adapter_used = "question"
+                request_options.cache_hit = False
             return [answer]
 
         # Try to find cacheable queries in the cache.
@@ -229,6 +235,9 @@ class Router(object):
                 if not isinstance(answer, dict):
                     answer = None
                 if answer:
+                    if hasattr(request_options, "adapter_used"):
+                        request_options.adapter_used = topic_type
+                        request_options.cache_hit = True
                     answers.append(answer)
                     continue
 
@@ -242,6 +251,9 @@ class Router(object):
             if cache_needed and answer:
                 cache.put(cache_entry_name, answer)
 
+            if hasattr(request_options, "adapter_used"):
+                request_options.adapter_used = topic_type
+                request_options.cache_hit = False
             answers.append(answer)
 
         return answers

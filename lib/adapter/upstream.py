@@ -54,9 +54,13 @@ class UpstreamAdapter(Adapter):
 
     def _get_page(self, topic, request_options=None):
 
-        options_string = "&".join(
-            ["%s=%s" % (x, y) for (x, y) in request_options.items()]
-        )
+        if request_options is not None:
+            opts = request_options.to_options_dict() if hasattr(request_options, 'to_options_dict') else request_options
+            options_string = "&".join(
+                ["%s=%s" % (x, y) for (x, y) in opts.items()]
+            )
+        else:
+            options_string = ""
         url = (
             CONFIG["upstream.url"].rstrip("/")
             + "/"
