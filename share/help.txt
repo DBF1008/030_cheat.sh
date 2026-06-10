@@ -69,6 +69,15 @@ List of search options:
     i   case insensitive search
     r   recursive
 
+Search results are scored by relevance and paginated.
+Use ?p=N to navigate between result pages:
+
+    /~snapshot/r?p=2    show the second page of recursive search results
+
+The score is based on keyword matches in the topic name, source,
+and answer content, with bonuses for exact phrases, case-sensitive
+matches, and word-boundary matches.
+
 Programming languages topics:
 
 Each programming language topic has the following subtopics:

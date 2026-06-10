@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''lib/search.py''\\).read\\(\\)\\); print\\(''search.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''lib/config.py''\\).read\\(\\)\\); print\\(''config.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''lib/frontend/ansi.py''\\).read\\(\\)\\); print\\(''ansi.py: OK''\\)\")"
+    ]
+  }
+}

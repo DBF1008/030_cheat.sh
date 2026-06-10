@@ -142,7 +142,7 @@ def _visualize(answers, request_options, search_mode=False):
         answer = answer_dict["answer"]
         found = found and not topic_type == "unknown"
 
-        if multiple_answers and topic != "LIMITED":
+        if multiple_answers and topic != "LIMITED" and topic != "search/pagination":
             section_name = f"{topic_type}:{topic}"
 
             if not highlight:
@@ -159,6 +159,31 @@ def _visualize(answers, request_options, search_mode=False):
                         "\n",
                     ]
                 )
+
+            # show snippet preview for search results
+            snippet = answer_dict.get("snippet", "")
+            score = answer_dict.get("score")
+            if snippet or score is not None:
+                if highlight and score is not None:
+                    result += (
+                        colored.fg("light_gray")
+                        + "[score: %d]" % score
+                        + colored.attr("reset")
+                        + "\n"
+                    )
+                elif score is not None:
+                    result += "[score: %d]\n" % score
+                if snippet:
+                    if highlight:
+                        result += (
+                            colored.fg("cyan")
+                            + snippet
+                            + colored.attr("reset")
+                            + "\n"
+                        )
+                    else:
+                        result += snippet + "\n"
+                    result += "-" * 40 + "\n"
 
         if answer_dict["format"] in ["ansi", "text"]:
             result += answer
