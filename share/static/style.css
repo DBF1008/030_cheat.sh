@@ -23,3 +23,11 @@ input[type="text"]{
     background: transparent;
     color: #bbbbbb;
 }
+
+#search-bar {
+    padding: 4px 0;
+}
+
+#search-bar form {
+    margin: 0;
+}

@@ -123,6 +123,63 @@ def _colorize_ansi_answer(
     return result
 
 
+def render_answer_block(answer_dict, highlight=True, color_style="",
+                        multiple_answers=False, request_options=None):
+    """
+    Render a single answer_dict as an ANSI-formatted string.
+
+    Returns:
+        str: ANSI-formatted answer text for this single block,
+             including section header if multiple_answers is True.
+    """
+    request_options = request_options or {}
+    topic = answer_dict["topic"]
+    topic_type = answer_dict["topic_type"]
+    answer = answer_dict["answer"]
+
+    result = ""
+
+    if multiple_answers and topic != "LIMITED":
+        section_name = f"{topic_type}:{topic}"
+
+        if not highlight:
+            result += f"#[{section_name}]\n"
+        else:
+            result += "".join(
+                [
+                    "\n",
+                    colored.bg("dark_gray"),
+                    colored.attr("res_underlined"),
+                    f" {section_name} ",
+                    colored.attr("res_underlined"),
+                    colored.attr("reset"),
+                    "\n",
+                ]
+            )
+
+    if answer_dict["format"] in ["ansi", "text"]:
+        result += answer
+    elif topic == ":firstpage-v1":
+        result += fmt.internal.colorize_internal_firstpage_v1(answer)
+    elif topic == "LIMITED":
+        result += _limited_answer(topic)
+    else:
+        result += _colorize_ansi_answer(
+            topic,
+            answer,
+            color_style,
+            highlight_all=highlight,
+            highlight_code=(
+                topic_type == "question"
+                and not request_options.get("add_comments")
+                and not request_options.get("remove_text")
+            ),
+            language=answer_dict.get("filetype"),
+        )
+
+    return result
+
+
 def _visualize(answers, request_options, search_mode=False):
 
     highlight = not bool(request_options and request_options.get("no-terminal"))
@@ -130,55 +187,19 @@ def _visualize(answers, request_options, search_mode=False):
     if color_style not in CONFIG["frontend.styles"]:
         color_style = ""
 
-    # if there is more than one answer,
-    # show the source of the answer
     multiple_answers = len(answers) > 1
 
     found = True
     result = ""
     for answer_dict in answers:
-        topic = answer_dict["topic"]
-        topic_type = answer_dict["topic_type"]
-        answer = answer_dict["answer"]
-        found = found and not topic_type == "unknown"
-
-        if multiple_answers and topic != "LIMITED":
-            section_name = f"{topic_type}:{topic}"
-
-            if not highlight:
-                result += f"#[{section_name}]\n"
-            else:
-                result += "".join(
-                    [
-                        "\n",
-                        colored.bg("dark_gray"),
-                        colored.attr("res_underlined"),
-                        f" {section_name} ",
-                        colored.attr("res_underlined"),
-                        colored.attr("reset"),
-                        "\n",
-                    ]
-                )
-
-        if answer_dict["format"] in ["ansi", "text"]:
-            result += answer
-        elif topic == ":firstpage-v1":
-            result += fmt.internal.colorize_internal_firstpage_v1(answer)
-        elif topic == "LIMITED":
-            result += _limited_answer(topic)
-        else:
-            result += _colorize_ansi_answer(
-                topic,
-                answer,
-                color_style,
-                highlight_all=highlight,
-                highlight_code=(
-                    topic_type == "question"
-                    and not request_options.get("add_comments")
-                    and not request_options.get("remove_text")
-                ),
-                language=answer_dict.get("filetype"),
-            )
+        found = found and not answer_dict["topic_type"] == "unknown"
+        result += render_answer_block(
+            answer_dict,
+            highlight=highlight,
+            color_style=color_style,
+            multiple_answers=multiple_answers,
+            request_options=request_options,
+        )
 
     if request_options.get("no-terminal"):
         result = remove_ansi(result)

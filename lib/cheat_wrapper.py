@@ -9,15 +9,14 @@ Exports:
 """
 
 import re
-import json
 
 from routing import get_answers, get_topics_list
 from search import find_answers_by_keyword
 from languages_data import LANGUAGE_ALIAS, rewrite_editor_section_name
 import postprocessing
 
-import frontend.html
-import frontend.ansi
+import frontend.sources as sources
+from frontend.views import get_renderer
 
 
 def _add_section_name(query):
@@ -111,15 +110,22 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
         for answer in answers
     ]
 
+    # Enrich each answer with source metadata
+    for answer in answers:
+        topic_type = answer.get("topic_type", "")
+        answer["source_url"] = sources.get_source_url(topic_type)
+        answer["editable"] = (topic_type == "cheat.sheets")
+        answer["edit_url"] = (
+            sources.get_edit_url(query, topic_type) if answer["editable"] else ""
+        )
+        answer["answer_id"] = "%s:%s" % (topic_type, answer.get("topic", ""))
+
     answer_data = {
         "query": query,
         "keyword": keyword,
         "answers": answers,
+        "topics_list": get_topics_list(),
     }
 
-    if output_format == "html":
-        answer_data["topics_list"] = get_topics_list()
-        return frontend.html.visualize(answer_data, request_options)
-    elif output_format == "json":
-        return json.dumps(answer_data, indent=4)
-    return frontend.ansi.visualize(answer_data, request_options)
+    renderer = get_renderer(output_format)
+    return renderer.render(answer_data, request_options)

@@ -318,6 +318,12 @@ def answer(topic=None):
         output_format = "html"
     else:
         output_format = "ansi"
+
+    # Allow explicit view format override via query parameter
+    view_override = request.args.get("view")
+    if view_override in ("ansi", "html", "json", "raw", "text"):
+        output_format = view_override
+
     result, found = cheat_wrapper(
         topic, request_options=options, output_format=output_format
     )
@@ -328,6 +334,14 @@ def answer(topic=None):
         return malformed_response
 
     log_query(ip_address, found, topic, user_agent)
-    if html_is_needed:
+
+    mime_types = {
+        "html": "text/html",
+        "json": "application/json",
+        "ansi": "text/plain",
+        "raw": "text/plain",
+        "text": "text/plain",
+    }
+    if output_format == "html":
         return result
-    return Response(result, mimetype="text/plain")
+    return Response(result, mimetype=mime_types.get(output_format, "text/plain"))
