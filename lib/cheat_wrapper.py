@@ -13,6 +13,7 @@ import json
 
 from routing import get_answers, get_topics_list
 from search import find_answers_by_keyword
+from ranking import rank_answers
 from languages_data import LANGUAGE_ALIAS, rewrite_editor_section_name
 import postprocessing
 
@@ -103,6 +104,8 @@ def cheat_wrapper(query, request_options=None, output_format="ansi"):
         )
     else:
         answers = get_answers(topic, request_options=request_options)
+
+    answers = rank_answers(answers, topic, request_options=request_options)
 
     answers = [
         postprocessing.postprocess(

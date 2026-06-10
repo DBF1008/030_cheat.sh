@@ -37,4 +37,10 @@ def parse_args(args):
 
     result.update(newargs)
 
+    # Normalize source and prefer into lists for downstream consumers
+    if "source" in result:
+        result["source"] = [s.strip() for s in result["source"].split(",") if s.strip()]
+    if "prefer" in result:
+        result["prefer"] = [s.strip() for s in result["prefer"].split(",") if s.strip()]
+
     return result

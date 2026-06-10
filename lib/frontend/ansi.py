@@ -142,11 +142,20 @@ def _visualize(answers, request_options, search_mode=False):
         answer = answer_dict["answer"]
         found = found and not topic_type == "unknown"
 
+        score = answer_dict.get("_score")
+        score_reasons = answer_dict.get("_score_reasons", [])
+
         if multiple_answers and topic != "LIMITED":
             section_name = f"{topic_type}:{topic}"
 
+            # Build score annotation if available
+            score_annotation = ""
+            if score is not None:
+                reasons_brief = ", ".join(score_reasons[:3])
+                score_annotation = f" [score: {score:.2f} | {reasons_brief}]"
+
             if not highlight:
-                result += f"#[{section_name}]\n"
+                result += f"#[{section_name}{score_annotation}]\n"
             else:
                 result += "".join(
                     [
@@ -156,9 +165,17 @@ def _visualize(answers, request_options, search_mode=False):
                         f" {section_name} ",
                         colored.attr("res_underlined"),
                         colored.attr("reset"),
-                        "\n",
                     ]
                 )
+                if score_annotation:
+                    result += "".join(
+                        [
+                            colored.fg("dark_olive_green_3a"),
+                            score_annotation,
+                            colored.attr("reset"),
+                        ]
+                    )
+                result += "\n"
 
         if answer_dict["format"] in ["ansi", "text"]:
             result += answer

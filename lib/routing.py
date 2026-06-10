@@ -192,6 +192,14 @@ class Router(object):
         if topic_type and topic_type in topic_types:
             topic_types = [topic_type]
 
+        # source filtering: if request_options specifies 'source',
+        # only keep topic_types in the allowed list
+        if request_options and "source" in request_options:
+            allowed = set(request_options["source"])
+            filtered = [t for t in topic_types if t in allowed]
+            if filtered:
+                topic_types = filtered
+
         # 'question' queries are pretty expensive, that's why they should be handled
         # in a special way:
         # we do not drop the old style cache entries and try to reuse them if possible
