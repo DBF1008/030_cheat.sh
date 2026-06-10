@@ -35,6 +35,8 @@ class Router(object):
 
         self._cached_topics_list = []
         self._cached_topic_type = {}
+        # Maps topic → set of adapter names whose is_found() returned True
+        self._cached_matched_sources = {}
 
         adapter_class = adapter.all_adapters(as_dict=True)
 
@@ -87,17 +89,29 @@ class Router(object):
         """
         Return list of topic types for `topic`
         or ["unknown"] if topic can't be determined.
+
+        As a side effect, populates `_cached_matched_sources[topic]` with
+        the set of adapter names whose ``is_found()`` returned True.  This
+        information is consumed by ``get_answers()`` via
+        ``request_options["_matched_sources"]``.
         """
 
         def __get_topic_type(topic: str) -> List[str]:
             result = []
+            matched = set()
             for regexp, route in self.routing_table:
                 if re.search(regexp, topic):
                     if route in self._adapter:
                         if self._adapter[route].is_found(topic):
                             result.append(route)
+                            matched.add(route)
                     else:
                         result.append(route)
+                        matched.add(route)
+
+            # Stash matched sources for get_answers() to pick up
+            self._cached_matched_sources[topic] = matched
+
             if not result:
                 return [CONFIG["routing.default"]]
 
